@@ -1,4 +1,4 @@
-# Tulip Grid3D import plugin
+# Tulip Chan & Vese regularization plugin
 
 ## Description
 
