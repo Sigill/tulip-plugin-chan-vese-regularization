@@ -20,6 +20,12 @@ std::string to_string(T t, std::ios_base & (*f)(std::ios_base&))
 	return oss.str();
 }
 
+ostream& operator<<(ostream& out, const std::vector<double>& v)
+{
+	std::copy(v.begin(), v.end(), std::ostream_iterator<double>(out, ", "));
+	return out;
+}
+
 std::string random_string(const size_t len) {
 	static const char alphanum[] =
 		"0123456789"
@@ -290,20 +296,21 @@ bool Reg_CV::run() {
 				if(pluginProgress->state() != TLP_CONTINUE)
 					continueProcess = false;
 
-				if((i + 1) % 10 == 0) {
+				if((i + 1) % 10 == 0)
 					pluginProgress->progress(i+1, iter_max);
-					std::cerr << "Iteration " << (i+1) << "/" << iter_max << std::endl;
-				}
 
-				if((this->export_interval > 0) && ((i + 1) % this->export_interval) == 0) {
-					std::cerr << "Iteration " << (i+1) << std::endl;
-					try {
-						this->result->copy(this->fn);
-						fnToSelection();
-						exportIntermediateResult(i+1);
-					} catch (export_exception &ex) {
-						std::cerr << "Export failed: " << ex.what() << std::endl;
-					}
+				if((i + 1) % 100 == 0)
+					std::cerr << "Iteration " << (i+1) << "/" << iter_max << std::endl;
+			}
+
+			if((this->export_interval > 0) && ((i + 1) % this->export_interval) == 0) {
+				std::cerr << "Exporting iteration " << (i+1) << std::endl;
+				try {
+					this->result->copy(this->fn);
+					fnToSelection();
+					exportIntermediateResult(i+1);
+				} catch (export_exception &ex) {
+					std::cerr << "Export failed: " << ex.what() << std::endl;
 				}
 			}
 
@@ -394,6 +401,8 @@ void Reg_CV::computeMeanValues()
 	node n;
 	unsigned int i;
 	std::vector< double > f0_value(1);
+	const std::pair<double, double> fn_min_max = computeFnMinMax();
+	const double threshold = (fn_min_max.first + fn_min_max.second) / 2.0;
 
 	std::fill(this->in_out_means.first.begin(), this->in_out_means.first.end(), 0.0);
 	std::fill(this->in_out_means.second.begin(), this->in_out_means.second.end(), 0.0);
@@ -407,7 +416,7 @@ void Reg_CV::computeMeanValues()
 		} else {
 			f0_value = this->f0_vector->getNodeValue(n);
 		}
-		if(this->fn->getNodeValue(n) >= 0.5) {
+		if(this->fn->getNodeValue(n) >= threshold) {
 			for(i = 0; i < f0_size; ++i) {
 				this->in_out_means.first[i] += f0_value[i];
 			}
